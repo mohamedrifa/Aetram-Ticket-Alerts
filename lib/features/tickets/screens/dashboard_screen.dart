@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
-
 import '../../../core/theme/app_colors.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../notifications/services/local_notification_service.dart';
 import '../../notifications/services/android_alarm_ticket_service.dart';
 import '../models/ticket_model.dart';
 import '../providers/ticket_provider.dart';
+import '../utils/ticket_search.dart';
 import '../widgets/ticket_card.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -19,6 +18,9 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen>
     with WidgetsBindingObserver {
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
   @override
   void initState() {
     super.initState();
@@ -40,6 +42,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _searchController.dispose();
     ref.read(ticketProvider.notifier).stopPolling();
     LocalNotificationService.onTicketTap = null;
     super.dispose();
@@ -109,24 +112,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Refresh tickets',
-                      onPressed: state.refreshing
-                          ? null
-                          : () => ref
-                                .read(ticketProvider.notifier)
-                                .load(refresh: true),
-                      icon: const Icon(Icons.refresh),
-                    ),
-                    IconButton(
-                      tooltip: 'Notifications',
-                      onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Ticket alerts are active when permission is enabled.',
-                          ),
-                        ),
-                      ),
-                      icon: const Icon(Icons.notifications_none),
+                      tooltip: 'My tickets',
+                      onPressed: () => context.push('/my-tickets'),
+                      icon: const Icon(Icons.assignment_ind_outlined),
                     ),
                     IconButton(
                       tooltip: 'Profile',
@@ -166,17 +154,39 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   ],
                 ),
               ),
-              if (state.lastUpdated != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    'Updated ${DateFormat('hh:mm a').format(state.lastUpdated!)}',
-                    style: const TextStyle(
-                      color: AppColors.secondaryText,
-                      fontSize: 11,
-                    ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: TextField(
+                  key: const Key('ticketSearchField'),
+                  controller: _searchController,
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                  decoration: InputDecoration(
+                    hintText: 'Search',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchQuery.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'Clear search',
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _searchQuery = '');
+                            },
+                            icon: const Icon(Icons.close),
+                          ),
                   ),
                 ),
+              ),
+              // if (state.lastUpdated != null)
+              //   Padding(
+              //     padding: const EdgeInsets.only(top: 8),
+              //     child: Text(
+              //       'Updated ${DateFormat('hh:mm a').format(state.lastUpdated!)}',
+              //       style: const TextStyle(
+              //         color: AppColors.secondaryText,
+              //         fontSize: 11,
+              //       ),
+              //     ),
+              //   ),
               const SizedBox(height: 10),
               const TabBar(
                 indicatorColor: AppColors.gold,
@@ -194,18 +204,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     _TicketList(
                       tickets: state.open,
                       state: state,
+                      query: _searchQuery,
                       emptyTitle: 'No Open Tickets',
                       emptyMessage: 'All support requests have been handled.',
                     ),
                     _TicketList(
                       tickets: state.closed,
                       state: state,
+                      query: _searchQuery,
                       emptyTitle: 'No Closed Tickets',
                       emptyMessage: 'Resolved tickets will appear here.',
                     ),
                     _TicketList(
                       tickets: state.all,
                       state: state,
+                      query: _searchQuery,
                       emptyTitle: 'No Tickets Available',
                       emptyMessage:
                           'Tickets will appear after a successful refresh.',
@@ -267,11 +280,13 @@ class _TicketList extends ConsumerWidget {
   const _TicketList({
     required this.tickets,
     required this.state,
+    required this.query,
     required this.emptyTitle,
     required this.emptyMessage,
   });
   final List<TicketModel> tickets;
   final TicketState state;
+  final String query;
   final String emptyTitle;
   final String emptyMessage;
 
@@ -282,6 +297,7 @@ class _TicketList extends ConsumerWidget {
         child: CircularProgressIndicator(color: AppColors.gold),
       );
     }
+    final visibleTickets = searchTickets(tickets, query);
     return RefreshIndicator(
       color: AppColors.gold,
       onRefresh: () => ref.read(ticketProvider.notifier).load(refresh: true),
@@ -291,7 +307,7 @@ class _TicketList extends ConsumerWidget {
         slivers: [
           if (state.error != null)
             SliverToBoxAdapter(child: _ErrorCard(message: state.error!)),
-          if (tickets.isEmpty)
+          if (visibleTickets.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
               child: Center(
@@ -307,7 +323,9 @@ class _TicketList extends ConsumerWidget {
                       ),
                       const SizedBox(height: 14),
                       Text(
-                        emptyTitle,
+                        query.trim().isEmpty
+                            ? emptyTitle
+                            : 'No Matching Tickets',
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 18,
@@ -315,7 +333,9 @@ class _TicketList extends ConsumerWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        emptyMessage,
+                        query.trim().isEmpty
+                            ? emptyMessage
+                            : 'Try a different ticket ID, subject, user, category, or status.',
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: AppColors.secondaryText),
                       ),
@@ -328,12 +348,14 @@ class _TicketList extends ConsumerWidget {
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
               sliver: SliverList.builder(
-                itemCount: tickets.length,
+                itemCount: visibleTickets.length,
                 itemBuilder: (context, index) {
-                  final ticket = tickets[index];
+                  final ticket = visibleTickets[index];
+                  final apiTicketId = ticket.ticketId;
                   return TicketCard(
                     ticket: ticket,
-                    onTap: () => context.push('/tickets/${ticket.ticketId}'),
+                    ticketId: apiTicketId,
+                    onTap: () => context.push('/tickets/$apiTicketId'),
                   );
                 },
               ),

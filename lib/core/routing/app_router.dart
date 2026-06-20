@@ -7,6 +7,7 @@ import '../../features/auth/screens/splash_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/tickets/screens/dashboard_screen.dart';
 import '../../features/tickets/screens/ticket_details_screen.dart';
+import '../../features/tickets/screens/my_tickets_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final auth = ref.watch(authProvider);
@@ -29,6 +30,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ticketId: int.tryParse(state.pathParameters['ticketId'] ?? '') ?? 0,
         ),
       ),
+      GoRoute(path: '/my-tickets', builder: (_, __) => const MyTicketsScreen()),
       GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
     ],
   );

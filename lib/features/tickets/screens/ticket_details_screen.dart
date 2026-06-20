@@ -15,6 +15,7 @@ import '../models/ticket_status.dart';
 import '../providers/ticket_provider.dart';
 import '../widgets/status_badge.dart';
 import '../utils/ticket_validation.dart';
+import '../utils/ticket_permissions.dart';
 
 class TicketDetailsScreen extends ConsumerWidget {
   const TicketDetailsScreen({super.key, required this.ticketId});
@@ -43,11 +44,6 @@ class TicketDetailsScreen extends ConsumerWidget {
                 ),
         ),
       );
-    final user = ref.watch(authProvider).user!;
-    final assignedToCurrent =
-        ticket.pickedBy?.trim().toLowerCase() ==
-        user.username.trim().toLowerCase();
-    final mutating = state.mutatingTicketId == ticket.ticketId;
     return Scaffold(
       appBar: AppBar(title: Text('Ticket #${ticket.ticketId}')),
       body: SafeArea(
@@ -121,95 +117,11 @@ class TicketDetailsScreen extends ConsumerWidget {
             const SizedBox(height: 14),
             _Attachment(ticket: ticket),
             const SizedBox(height: 18),
-            if (ticket.status == TicketStatus.open && ticket.isUnassigned)
-              GoldButton(
-                label: 'Take Ticket',
-                icon: Icons.assignment_ind_outlined,
-                loading: mutating,
-                onPressed: () =>
-                    _confirmTake(context, ref, ticket, user.username),
-              )
-            else if (ticket.status.isActive && assignedToCurrent)
-              GoldButton(
-                label: 'Close Ticket',
-                icon: Icons.task_alt,
-                loading: mutating,
-                onPressed: () => _showCloseSheet(context, ref, ticket),
-              )
-            else
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Text(
-                  ticket.status == TicketStatus.closed
-                      ? 'This ticket is closed and read-only.'
-                      : ticket.isUnassigned
-                      ? 'No actions are available for this status.'
-                      : 'Assigned to ${ticket.pickedBy}. Only that user can close it.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.secondaryText),
-                ),
-              ),
+            _TicketResponseForm(ticket: ticket),
           ],
         ),
       ),
     );
-  }
-
-  Future<void> _confirmTake(
-    BuildContext context,
-    WidgetRef ref,
-    TicketModel ticket,
-    String name,
-  ) async {
-    final confirmed =
-        await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Take this ticket?'),
-            content: Text(
-              'Ticket #${ticket.ticketId} will be assigned to $name.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Take Ticket'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
-    if (!confirmed) return;
-    final error = await ref.read(ticketProvider.notifier).take(ticket);
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(error ?? 'Ticket taken successfully.')),
-    );
-  }
-
-  Future<void> _showCloseSheet(
-    BuildContext context,
-    WidgetRef ref,
-    TicketModel ticket,
-  ) async {
-    final success = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (context) => _CloseTicketSheet(ticket: ticket),
-    );
-    if (success == true && context.mounted)
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ticket closed successfully.')),
-      );
   }
 }
 
@@ -278,7 +190,7 @@ class _Attachment extends StatelessWidget {
   Widget build(BuildContext context) {
     final url = buildAttachmentUrl(
       ticket.fullFilePath,
-      EnvironmentConfig.apiBaseUrl,
+      EnvironmentConfig.attachmentBaseUrl,
     );
     if (url == null)
       return const _Section(
@@ -298,17 +210,29 @@ class _Attachment extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               child: CachedNetworkImage(
                 imageUrl: url,
-                height: 210,
-                fit: BoxFit.cover,
+                width: double.infinity,
+                fit: BoxFit.contain,
                 placeholder: (_, __) => const SizedBox(
-                  height: 120,
+                  height: 210,
                   child: Center(
                     child: CircularProgressIndicator(color: AppColors.gold),
                   ),
                 ),
-                errorWidget: (_, __, ___) => const SizedBox(
-                  height: 100,
-                  child: Center(child: Text('Attachment preview unavailable.')),
+                errorWidget: (_, __, ___) => Container(
+                  height: 120,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.broken_image_outlined, color: AppColors.error),
+                      SizedBox(height: 8),
+                      Text('Attachment preview unavailable.'),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -330,6 +254,193 @@ class _Attachment extends StatelessWidget {
             label: const Text('Open attachment'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StatusOption {
+  const _StatusOption(this.id, this.label);
+  final String id;
+  final String label;
+}
+
+const _statusOptions = <_StatusOption>[
+  _StatusOption('1', 'Open'),
+  _StatusOption('2', 'In Progress'),
+  _StatusOption('3', 'On Hold'),
+  _StatusOption('4', 'Escalated'),
+  _StatusOption('5', 'Resolved'),
+  _StatusOption('6', 'Closed'),
+  _StatusOption('7', 'Reopened'),
+  _StatusOption('8', 'Cancelled'),
+];
+
+class _TicketResponseForm extends ConsumerStatefulWidget {
+  const _TicketResponseForm({required this.ticket});
+  final TicketModel ticket;
+
+  @override
+  ConsumerState<_TicketResponseForm> createState() =>
+      _TicketResponseFormState();
+}
+
+class _TicketResponseFormState extends ConsumerState<_TicketResponseForm> {
+  final _formKey = GlobalKey<FormState>();
+  final _commentController = TextEditingController();
+  String? _selectedStatusId;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedStatusId = switch (widget.ticket.status) {
+      TicketStatus.open => '1',
+      TicketStatus.inProgress => '2',
+      TicketStatus.closed => '6',
+      TicketStatus.unknown => null,
+    };
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    final statusId = _selectedStatusId;
+    if (statusId == null) return;
+    final result = await ref
+        .read(ticketProvider.notifier)
+        .submitResponse(
+          ticket: widget.ticket,
+          statusId: statusId,
+          comment: _commentController.text,
+        );
+    if (!mounted) return;
+    if (result.success) _commentController.clear();
+    final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: result.success
+            ? AppColors.success.withValues(alpha: .95)
+            : AppColors.error.withValues(alpha: .95),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        content: Row(
+          children: [
+            Icon(
+              result.success ? Icons.check_circle_outline : Icons.error_outline,
+              color: Colors.black,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                result.message,
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = ref.watch(authProvider).user!;
+    final busy =
+        ref.watch(ticketProvider).mutatingTicketId == widget.ticket.ticketId;
+    // final canEdit = canUserUpdateTicket(
+    //   ticket: widget.ticket,
+    //   username: user.username,
+    //   backendUserId: user.backendUserId,
+    // );
+    final canEdit = true;
+    return _Section(
+      title: 'Submit Ticket Response',
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (!canEdit) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: .1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.error.withValues(alpha: .45),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.lock_outline, color: AppColors.error),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Assigned to ${widget.ticket.pickedBy}. Only that user can update this ticket.',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            DropdownButtonFormField<String>(
+              key: const Key('ticketStatusDropdown'),
+              initialValue: _selectedStatusId,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Status',
+                prefixIcon: Icon(Icons.flag_outlined),
+              ),
+              items: _statusOptions
+                  .map(
+                    (option) => DropdownMenuItem(
+                      value: option.id,
+                      child: Text('${option.id}  •  ${option.label}'),
+                    ),
+                  )
+                  .toList(),
+              onChanged: busy || !canEdit
+                  ? null
+                  : (value) => setState(() => _selectedStatusId = value),
+              validator: (value) =>
+                  value == null ? 'Please select a status.' : null,
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              key: const Key('ticketResponseComment'),
+              controller: _commentController,
+              enabled: !busy && canEdit,
+              minLines: 4,
+              maxLines: 7,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Comment',
+                hintText: 'Enter the ticket response or resolution details.',
+                alignLabelWithHint: true,
+                prefixIcon: Padding(
+                  padding: EdgeInsets.only(bottom: 72),
+                  child: Icon(Icons.comment_outlined),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            GoldButton(
+              label: 'Submit',
+              icon: Icons.send_rounded,
+              loading: busy,
+              onPressed: busy || !canEdit ? null : _submit,
+            ),
+          ],
+        ),
       ),
     );
   }

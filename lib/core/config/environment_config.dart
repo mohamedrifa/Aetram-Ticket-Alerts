@@ -7,6 +7,9 @@ class EnvironmentConfig {
       dotenv.get('APP_NAME', fallback: 'Aetram Ticket Support');
   static String get apiBaseUrl =>
       dotenv.get('API_BASE_URL').replaceAll(RegExp(r'/+$'), '');
+  static String get attachmentBaseUrl => dotenv
+      .get('ATTACHMENT_BASE_URL', fallback: apiBaseUrl)
+      .replaceAll(RegExp(r'/+$'), '');
   static int get connectTimeoutSeconds =>
       dotenv.getInt('API_CONNECT_TIMEOUT_SECONDS', fallback: 15);
   static int get receiveTimeoutSeconds =>

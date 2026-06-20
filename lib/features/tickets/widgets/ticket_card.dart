@@ -7,8 +7,14 @@ import '../models/ticket_model.dart';
 import 'status_badge.dart';
 
 class TicketCard extends StatelessWidget {
-  const TicketCard({super.key, required this.ticket, required this.onTap});
+  const TicketCard({
+    super.key,
+    required this.ticket,
+    required this.ticketId,
+    required this.onTap,
+  });
   final TicketModel ticket;
+  final int ticketId;
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) {
@@ -19,7 +25,7 @@ class TicketCard extends StatelessWidget {
           ).format(ticket.createdAt!.toLocal());
     return Semantics(
       button: true,
-      label: 'View ticket ${ticket.ticketId}',
+      label: 'View ticket $ticketId',
       child: Card(
         margin: const EdgeInsets.only(bottom: 12),
         color: AppColors.card,
@@ -28,7 +34,7 @@ class TicketCard extends StatelessWidget {
           side: const BorderSide(color: AppColors.border),
         ),
         child: InkWell(
-          key: Key('ticketCard_${ticket.ticketId}'),
+          key: Key('ticketCard_$ticketId'),
           onTap: onTap,
           borderRadius: BorderRadius.circular(18),
           child: Padding(
@@ -39,7 +45,7 @@ class TicketCard extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      '#${ticket.ticketId}',
+                      'Ticket ID: $ticketId',
                       style: const TextStyle(
                         color: AppColors.gold,
                         fontWeight: FontWeight.w800,

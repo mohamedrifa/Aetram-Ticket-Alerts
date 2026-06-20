@@ -34,11 +34,15 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: TicketCard(ticket: value, onTap: () {}),
+          body: TicketCard(
+            ticket: value,
+            ticketId: value.ticketId,
+            onTap: () {},
+          ),
         ),
       ),
     );
-    expect(find.text('#143'), findsOneWidget);
+    expect(find.text('Ticket ID: 143'), findsOneWidget);
     expect(find.text('Unable to sign in'), findsOneWidget);
     expect(find.text('Password reset failed'), findsOneWidget);
     expect(find.text('Not assigned'), findsOneWidget);

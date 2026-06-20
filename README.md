@@ -33,6 +33,7 @@ Replace these demo users, IDs, and passwords before controlled distribution. The
 
 - `APP_NAME`
 - `API_BASE_URL`
+- `ATTACHMENT_BASE_URL`
 - `API_CONNECT_TIMEOUT_SECONDS`
 - `API_RECEIVE_TIMEOUT_SECONDS`
 - `TICKET_POLLING_SECONDS`

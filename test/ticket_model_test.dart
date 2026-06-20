@@ -2,6 +2,8 @@ import 'package:aetram_ticket_alerts/core/utils/attachment_utils.dart';
 import 'package:aetram_ticket_alerts/features/tickets/models/ticket_model.dart';
 import 'package:aetram_ticket_alerts/features/tickets/models/ticket_status.dart';
 import 'package:aetram_ticket_alerts/features/tickets/utils/ticket_filters.dart';
+import 'package:aetram_ticket_alerts/features/tickets/utils/ticket_search.dart';
+import 'package:aetram_ticket_alerts/features/tickets/utils/ticket_permissions.dart';
 import 'package:aetram_ticket_alerts/features/tickets/utils/ticket_validation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -74,6 +76,46 @@ void main() {
     expect(filterOpenTickets(values).map((e) => e.ticketId), [3, 2]);
     expect(filterClosedTickets(values).map((e) => e.ticketId), [1]);
   });
+  test('searches tickets and filters assignments by logged-in username', () {
+    final values = [
+      ticket(143, TicketStatus.open, pickedBy: 'Hemalatha'),
+      ticket(208, TicketStatus.closed, pickedBy: 'Gopinath'),
+    ];
+    expect(searchTickets(values, '143').single.ticketId, 143);
+    expect(searchTickets(values, 'closed').single.ticketId, 208);
+    expect(ticketsPickedByUser(values, 'hemalatha').single.ticketId, 143);
+  });
+  test('only allows the assigned user to update a picked ticket', () {
+    final assigned = ticket(
+      143,
+      TicketStatus.inProgress,
+      pickedBy: 'Hemalatha',
+    );
+    expect(
+      canUserUpdateTicket(
+        ticket: assigned,
+        username: 'hemalatha',
+        backendUserId: '121',
+      ),
+      isTrue,
+    );
+    expect(
+      canUserUpdateTicket(
+        ticket: assigned,
+        username: 'gopinath',
+        backendUserId: '76',
+      ),
+      isFalse,
+    );
+    expect(
+      canUserUpdateTicket(
+        ticket: ticket(144, TicketStatus.open),
+        username: 'vimal',
+        backendUserId: '31',
+      ),
+      isTrue,
+    );
+  });
   test('converts attachment paths safely', () {
     expect(
       buildAttachmentUrl(
@@ -88,6 +130,13 @@ void main() {
         'https://example.com',
       ),
       'https://example.com/UploadedFiles/Tickets/a.png',
+    );
+    expect(
+      buildAttachmentUrl(
+        'file://172.16.56.66/inetpub/vhosts/aetramtrades.in/ticket.aetramtrades.in/wwwroot/UploadedFiles/Tickets/95_test.jpg',
+        'https://ticket.aetramtrades.in',
+      ),
+      'https://ticket.aetramtrades.in/UploadedFiles/Tickets/95_test.jpg',
     );
     expect(
       buildAttachmentUrl(

@@ -32,12 +32,17 @@ class TicketActionResult {
   bool get isSuccess =>
       statusCode >= 200 && statusCode < 300 ||
       status.toLowerCase() == 'success';
-  factory TicketActionResult.fromJson(Map<String, dynamic> json) =>
-      TicketActionResult(
-        statusCode: json['StatusCode'] is int
-            ? json['StatusCode'] as int
-            : int.tryParse('${json['StatusCode'] ?? ''}') ?? 0,
-        status: '${json['Status'] ?? ''}',
-        message: '${json['Message'] ?? 'Request completed.'}',
-      );
+  factory TicketActionResult.fromJson(Map<String, dynamic> json) {
+    final values = <String, dynamic>{
+      for (final entry in json.entries) entry.key.toLowerCase(): entry.value,
+    };
+    final rawCode = values['statuscode'];
+    return TicketActionResult(
+      statusCode: rawCode is int
+          ? rawCode
+          : int.tryParse('${rawCode ?? ''}') ?? 0,
+      status: '${values['status'] ?? ''}',
+      message: '${values['message'] ?? 'Request completed.'}',
+    );
+  }
 }

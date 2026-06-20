@@ -67,8 +67,18 @@ class TicketApiService {
 
   ApiException _mapError(DioException error) {
     final data = error.response?.data;
-    if (data is Map && '${data['Message'] ?? ''}'.trim().isNotEmpty)
-      return ApiException('${data['Message']}');
+    if (data is Map) {
+      String? message;
+      for (final entry in data.entries) {
+        if ('${entry.key}'.toLowerCase() == 'message') {
+          message = '${entry.value}';
+          break;
+        }
+      }
+      if (message != null && message.trim().isNotEmpty) {
+        return ApiException(message);
+      }
+    }
     if (error.type == DioExceptionType.connectionTimeout ||
         error.type == DioExceptionType.receiveTimeout ||
         error.type == DioExceptionType.sendTimeout)

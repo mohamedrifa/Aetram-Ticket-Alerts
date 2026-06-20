@@ -13,6 +13,7 @@ import '../models/ticket_model.dart';
 import '../models/ticket_response.dart';
 import '../utils/ticket_filters.dart';
 import '../utils/ticket_validation.dart';
+import '../utils/ticket_permissions.dart';
 
 class TicketState {
   const TicketState({
@@ -121,6 +122,61 @@ class TicketController extends Notifier<TicketState> {
     );
   }
 
+  Future<({bool success, String message})> submitResponse({
+    required TicketModel ticket,
+    required String statusId,
+    required String comment,
+  }) async {
+    final user = ref.read(authProvider).user;
+    if (user == null) {
+      return (success: false, message: 'Your session is no longer available.');
+    }
+    if (!canUserUpdateTicket(
+      ticket: ticket,
+      username: user.username,
+      backendUserId: user.backendUserId,
+    )) {
+      return (
+        success: false,
+        message: 'Only the assigned user can update this ticket.',
+      );
+    }
+    if (state.mutatingTicketId != null) {
+      return (
+        success: false,
+        message: 'Another ticket response is already being submitted.',
+      );
+    }
+    state = state.copyWith(mutatingTicketId: ticket.ticketId, clearError: true);
+    try {
+      final result = await _repository.submit(
+        TicketResponseRequest(
+          ticketId: ticket.ticketId,
+          pickedBy: user.numericBackendUserId,
+          status: statusId,
+          comment: comment.trim(),
+          commentId: ticket.commentId ?? 0,
+        ),
+      );
+      state = state.copyWith(clearMutation: true);
+      await load(refresh: true);
+      return (
+        success: true,
+        message: result.message.trim().isEmpty
+            ? 'Ticket response submitted successfully.'
+            : result.message,
+      );
+    } catch (error) {
+      state = state.copyWith(clearMutation: true);
+      return (
+        success: false,
+        message: error is ApiException
+            ? error.message
+            : 'Unable to submit the ticket response.',
+      );
+    }
+  }
+
   Future<String?> take(TicketModel ticket) async {
     final user = ref.read(authProvider).user;
     if (user == null || state.mutatingTicketId != null)
@@ -131,7 +187,7 @@ class TicketController extends Notifier<TicketState> {
         TicketResponseRequest(
           ticketId: ticket.ticketId,
           pickedBy: user.numericBackendUserId,
-          status: 'In Progress',
+          status: '2',
           comment: 'Ticket taken by ${user.username}.',
           commentId: ticket.commentId ?? 0,
         ),
@@ -164,7 +220,7 @@ class TicketController extends Notifier<TicketState> {
         TicketResponseRequest(
           ticketId: ticket.ticketId,
           pickedBy: user.numericBackendUserId,
-          status: 'Closed',
+          status: '6',
           comment: comment.trim(),
           commentId: ticket.commentId ?? 0,
         ),
