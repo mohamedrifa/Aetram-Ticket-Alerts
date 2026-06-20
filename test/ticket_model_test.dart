@@ -3,7 +3,6 @@ import 'package:aetram_ticket_alerts/features/tickets/models/ticket_model.dart';
 import 'package:aetram_ticket_alerts/features/tickets/models/ticket_status.dart';
 import 'package:aetram_ticket_alerts/features/tickets/utils/ticket_filters.dart';
 import 'package:aetram_ticket_alerts/features/tickets/utils/ticket_search.dart';
-import 'package:aetram_ticket_alerts/features/tickets/utils/ticket_permissions.dart';
 import 'package:aetram_ticket_alerts/features/tickets/utils/ticket_validation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -84,37 +83,6 @@ void main() {
     expect(searchTickets(values, '143').single.ticketId, 143);
     expect(searchTickets(values, 'closed').single.ticketId, 208);
     expect(ticketsPickedByUser(values, 'hemalatha').single.ticketId, 143);
-  });
-  test('only allows the assigned user to update a picked ticket', () {
-    final assigned = ticket(
-      143,
-      TicketStatus.inProgress,
-      pickedBy: 'Hemalatha',
-    );
-    expect(
-      canUserUpdateTicket(
-        ticket: assigned,
-        username: 'hemalatha',
-        backendUserId: '121',
-      ),
-      isTrue,
-    );
-    expect(
-      canUserUpdateTicket(
-        ticket: assigned,
-        username: 'gopinath',
-        backendUserId: '76',
-      ),
-      isFalse,
-    );
-    expect(
-      canUserUpdateTicket(
-        ticket: ticket(144, TicketStatus.open),
-        username: 'vimal',
-        backendUserId: '31',
-      ),
-      isTrue,
-    );
   });
   test('converts attachment paths safely', () {
     expect(

@@ -15,7 +15,6 @@ import '../models/ticket_status.dart';
 import '../providers/ticket_provider.dart';
 import '../widgets/status_badge.dart';
 import '../utils/ticket_validation.dart';
-import '../utils/ticket_permissions.dart';
 
 class TicketDetailsScreen extends ConsumerWidget {
   const TicketDetailsScreen({super.key, required this.ticketId});
@@ -117,7 +116,45 @@ class TicketDetailsScreen extends ConsumerWidget {
             const SizedBox(height: 14),
             _Attachment(ticket: ticket),
             const SizedBox(height: 18),
-            _TicketResponseForm(ticket: ticket),
+            if (ticket.status == TicketStatus.closed)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: .1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppColors.success.withValues(alpha: .45),
+                  ),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.task_alt, color: AppColors.success),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Closed',
+                            style: TextStyle(
+                              color: AppColors.success,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'This ticket is closed and cannot be updated.',
+                            style: TextStyle(color: AppColors.secondaryText),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              _TicketResponseForm(ticket: ticket),
           ],
         ),
       ),
@@ -352,15 +389,8 @@ class _TicketResponseFormState extends ConsumerState<_TicketResponseForm> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(authProvider).user!;
     final busy =
         ref.watch(ticketProvider).mutatingTicketId == widget.ticket.ticketId;
-    // final canEdit = canUserUpdateTicket(
-    //   ticket: widget.ticket,
-    //   username: user.username,
-    //   backendUserId: user.backendUserId,
-    // );
-    final canEdit = true;
     return _Section(
       title: 'Submit Ticket Response',
       child: Form(
@@ -368,30 +398,6 @@ class _TicketResponseFormState extends ConsumerState<_TicketResponseForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (!canEdit) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.error.withValues(alpha: .1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppColors.error.withValues(alpha: .45),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.lock_outline, color: AppColors.error),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Assigned to ${widget.ticket.pickedBy}. Only that user can update this ticket.',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
             DropdownButtonFormField<String>(
               key: const Key('ticketStatusDropdown'),
               initialValue: _selectedStatusId,
@@ -404,11 +410,11 @@ class _TicketResponseFormState extends ConsumerState<_TicketResponseForm> {
                   .map(
                     (option) => DropdownMenuItem(
                       value: option.id,
-                      child: Text('${option.id}  •  ${option.label}'),
+                      child: Text(option.label),
                     ),
                   )
                   .toList(),
-              onChanged: busy || !canEdit
+              onChanged: busy
                   ? null
                   : (value) => setState(() => _selectedStatusId = value),
               validator: (value) =>
@@ -418,7 +424,7 @@ class _TicketResponseFormState extends ConsumerState<_TicketResponseForm> {
             TextFormField(
               key: const Key('ticketResponseComment'),
               controller: _commentController,
-              enabled: !busy && canEdit,
+              enabled: !busy,
               minLines: 4,
               maxLines: 7,
               textCapitalization: TextCapitalization.sentences,
@@ -437,7 +443,7 @@ class _TicketResponseFormState extends ConsumerState<_TicketResponseForm> {
               label: 'Submit',
               icon: Icons.send_rounded,
               loading: busy,
-              onPressed: busy || !canEdit ? null : _submit,
+              onPressed: busy ? null : _submit,
             ),
           ],
         ),

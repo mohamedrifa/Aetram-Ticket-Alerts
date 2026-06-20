@@ -32,7 +32,7 @@ class ProfileScreen extends ConsumerWidget {
             const Text(
               'Support user',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.gold),
+              style: TextStyle(color: AppColors.gold),
             ),
             const SizedBox(height: 24),
             Card(
@@ -42,12 +42,6 @@ class ProfileScreen extends ConsumerWidget {
                     leading: const Icon(Icons.account_circle_outlined),
                     title: const Text('Username'),
                     subtitle: Text(user.username),
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.numbers),
-                    title: const Text('Backend user ID'),
-                    subtitle: Text(user.backendUserId),
                   ),
                 ],
               ),

@@ -13,7 +13,6 @@ import '../models/ticket_model.dart';
 import '../models/ticket_response.dart';
 import '../utils/ticket_filters.dart';
 import '../utils/ticket_validation.dart';
-import '../utils/ticket_permissions.dart';
 
 class TicketState {
   const TicketState({
@@ -130,16 +129,6 @@ class TicketController extends Notifier<TicketState> {
     final user = ref.read(authProvider).user;
     if (user == null) {
       return (success: false, message: 'Your session is no longer available.');
-    }
-    if (!canUserUpdateTicket(
-      ticket: ticket,
-      username: user.username,
-      backendUserId: user.backendUserId,
-    )) {
-      return (
-        success: false,
-        message: 'Only the assigned user can update this ticket.',
-      );
     }
     if (state.mutatingTicketId != null) {
       return (
