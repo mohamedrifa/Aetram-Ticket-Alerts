@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../notifications/services/local_notification_service.dart';
+import '../../notifications/services/android_alarm_ticket_service.dart';
 import '../models/ticket_model.dart';
 import '../providers/ticket_provider.dart';
 import '../widgets/ticket_card.dart';
@@ -26,6 +27,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       ref.read(ticketProvider.notifier)
         ..load()
         ..startPolling();
+      final user = ref.read(authProvider).user;
+      if (user != null) {
+        AndroidAlarmTicketService.schedule(user.numericBackendUserId);
+      }
     });
     LocalNotificationService.onTicketTap = (id) {
       if (mounted) context.go('/tickets/$id');
@@ -93,7 +98,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                             ),
                           ),
                           Text(
-                            '${user.fullName} - ${user.role}',
+                            user.username,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: AppColors.secondaryText,

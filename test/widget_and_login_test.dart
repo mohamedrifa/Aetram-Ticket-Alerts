@@ -13,7 +13,7 @@ void main() {
     );
     await tester.tap(find.text('Sign in'));
     await tester.pump();
-    expect(find.text('Enter your username or employee code.'), findsOneWidget);
+    expect(find.text('Enter your username.'), findsOneWidget);
     expect(find.text('Enter your password.'), findsOneWidget);
   });
   testWidgets('ticket card renders professional ticket information', (

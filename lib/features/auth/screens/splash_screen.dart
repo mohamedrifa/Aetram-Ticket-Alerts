@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../providers/auth_provider.dart';
+import '../../notifications/services/battery_optimization_service.dart';
+import '../../notifications/services/local_notification_service.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -16,6 +18,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   void initState() {
     super.initState();
     Future.microtask(() async {
+      await LocalNotificationService.instance.requestPermissionIfNeeded();
+      await BatteryOptimizationService.requestExemptionIfNeeded();
       await ref.read(authProvider.notifier).initialize();
       if (!mounted) return;
       context.go(

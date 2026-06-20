@@ -20,7 +20,7 @@ class AuthStorage {
         (key, value) => MapEntry('$key', '$value'),
       );
       final user = SupportUser.fromSessionJson(map);
-      return user.backendUserId == 0 ? null : user;
+      return user.backendUserId.isEmpty || user.username.isEmpty ? null : user;
     } catch (_) {
       await clear();
       return null;

@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/gold_button.dart';
-import '../../notifications/services/local_notification_service.dart';
 import '../providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -34,9 +33,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!mounted) return;
     setState(() => _error = error);
     if (error == null) {
-      await LocalNotificationService.instance.explainAndRequestPermission(
-        context,
-      );
       if (mounted) context.go('/dashboard');
     }
   }
@@ -82,11 +78,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       controller: _identity,
                       textInputAction: TextInputAction.next,
                       decoration: const InputDecoration(
-                        labelText: 'Username or employee code',
+                        labelText: 'Username',
                         prefixIcon: Icon(Icons.badge_outlined),
                       ),
                       validator: (v) => v == null || v.trim().isEmpty
-                          ? 'Enter your username or employee code.'
+                          ? 'Enter your username.'
                           : null,
                     ),
                     const SizedBox(height: 14),

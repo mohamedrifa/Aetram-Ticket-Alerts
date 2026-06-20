@@ -13,6 +13,8 @@ class EnvironmentConfig {
       dotenv.getInt('API_RECEIVE_TIMEOUT_SECONDS', fallback: 20);
   static int get pollingSeconds =>
       dotenv.getInt('TICKET_POLLING_SECONDS', fallback: 60);
+  static int get androidAlarmIntervalSeconds =>
+      dotenv.getInt('ANDROID_ALARM_INTERVAL_SECONDS', fallback: 10);
   static int get backgroundCheckMinutes =>
       dotenv.getInt('BACKGROUND_CHECK_MINUTES', fallback: 15);
   static bool get enableBackgroundCheck =>

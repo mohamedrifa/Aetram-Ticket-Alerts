@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../tickets/providers/ticket_provider.dart';
+import '../../notifications/services/android_alarm_ticket_service.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -24,12 +25,12 @@ class ProfileScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              user.fullName,
+              user.username,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
             ),
-            Text(
-              user.role,
+            const Text(
+              'Support user',
               textAlign: TextAlign.center,
               style: const TextStyle(color: AppColors.gold),
             ),
@@ -37,12 +38,6 @@ class ProfileScreen extends ConsumerWidget {
             Card(
               child: Column(
                 children: [
-                  ListTile(
-                    leading: const Icon(Icons.badge_outlined),
-                    title: const Text('Employee code'),
-                    subtitle: Text(user.employeeCode),
-                  ),
-                  const Divider(height: 1),
                   ListTile(
                     leading: const Icon(Icons.account_circle_outlined),
                     title: const Text('Username'),
@@ -52,7 +47,7 @@ class ProfileScreen extends ConsumerWidget {
                   ListTile(
                     leading: const Icon(Icons.numbers),
                     title: const Text('Backend user ID'),
-                    subtitle: Text('${user.backendUserId}'),
+                    subtitle: Text(user.backendUserId),
                   ),
                 ],
               ),
@@ -87,6 +82,7 @@ class ProfileScreen extends ConsumerWidget {
                     false;
                 if (!ok) return;
                 ref.read(ticketProvider.notifier).stopPolling();
+                await AndroidAlarmTicketService.cancel();
                 await ref.read(authProvider.notifier).logout();
                 if (context.mounted) context.go('/login');
               },

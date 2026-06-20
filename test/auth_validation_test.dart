@@ -2,19 +2,20 @@ import 'package:aetram_ticket_alerts/features/auth/data/local_authenticator.dart
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('validates username and employee-code login credentials', () {
+  test('validates the three configured login credentials', () {
     expect(
-      authenticateStaticUser('support1', 'Support@123')?.backendUserId,
-      95,
+      authenticateStaticUser('hemalatha', 'Hemalatha@123')?.backendUserId,
+      '121',
     );
     expect(
-      authenticateStaticUser(' emp002 ', 'Support@456')?.backendUserId,
-      96,
+      authenticateStaticUser(' gopinath ', 'Gopinath@123')?.backendUserId,
+      '76',
     );
+    expect(authenticateStaticUser('vimal', 'Vimal@123')?.backendUserId, '31');
   });
 
   test('rejects invalid login credentials', () {
-    expect(authenticateStaticUser('support1', 'wrong'), isNull);
-    expect(authenticateStaticUser('unknown', 'Support@123'), isNull);
+    expect(authenticateStaticUser('hemalatha', 'wrong'), isNull);
+    expect(authenticateStaticUser('unknown', 'Vimal@123'), isNull);
   });
 }

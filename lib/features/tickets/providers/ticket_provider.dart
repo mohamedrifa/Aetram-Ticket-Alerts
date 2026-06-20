@@ -6,9 +6,7 @@ import '../../../core/config/environment_config.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../notifications/services/local_notification_service.dart';
-import '../../notifications/services/seen_ticket_store.dart';
-import '../../notifications/utils/new_ticket_detector.dart';
+import '../../notifications/services/ticket_notification_checker.dart';
 import '../data/ticket_api_service.dart';
 import '../data/ticket_repository.dart';
 import '../models/ticket_model.dart';
@@ -72,7 +70,6 @@ final ticketProvider = NotifierProvider<TicketController, TicketState>(
 class TicketController extends Notifier<TicketState> {
   Timer? _timer;
   late TicketRepository _repository;
-  final _seenStore = SeenTicketStore();
   @override
   TicketState build() {
     _repository = ref.watch(ticketRepositoryProvider);
@@ -118,21 +115,10 @@ class TicketController extends Notifier<TicketState> {
   Future<void> _detectNewTickets(List<TicketModel> tickets) async {
     final user = ref.read(authProvider).user;
     if (user == null) return;
-    final seen = await _seenStore.read(user.backendUserId);
-    if (seen == null) {
-      await _seenStore.write(
-        user.backendUserId,
-        tickets.map((e) => e.ticketId),
-      );
-      return;
-    }
-    await LocalNotificationService.instance.showNewTickets(
-      detectNewOpenTickets(tickets, seen),
+    await processTicketSnapshot(
+      userId: user.numericBackendUserId,
+      tickets: tickets,
     );
-    await _seenStore.write(user.backendUserId, {
-      ...seen,
-      ...tickets.map((e) => e.ticketId),
-    });
   }
 
   Future<String?> take(TicketModel ticket) async {
@@ -144,9 +130,9 @@ class TicketController extends Notifier<TicketState> {
       await _repository.submit(
         TicketResponseRequest(
           ticketId: ticket.ticketId,
-          pickedBy: user.backendUserId,
+          pickedBy: user.numericBackendUserId,
           status: 'In Progress',
-          comment: 'Ticket taken by ${user.fullName}.',
+          comment: 'Ticket taken by ${user.username}.',
           commentId: ticket.commentId ?? 0,
         ),
       );
@@ -168,7 +154,7 @@ class TicketController extends Notifier<TicketState> {
     if (validation != null) return validation;
     if (user == null ||
         ticket.pickedBy?.trim().toLowerCase() !=
-            user.fullName.trim().toLowerCase())
+            user.username.trim().toLowerCase())
       return 'Only the assigned support user can close this ticket.';
     if (state.mutatingTicketId != null)
       return 'Another ticket action is already in progress.';
@@ -177,7 +163,7 @@ class TicketController extends Notifier<TicketState> {
       await _repository.submit(
         TicketResponseRequest(
           ticketId: ticket.ticketId,
-          pickedBy: user.backendUserId,
+          pickedBy: user.numericBackendUserId,
           status: 'Closed',
           comment: comment.trim(),
           commentId: ticket.commentId ?? 0,

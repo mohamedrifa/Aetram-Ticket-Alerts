@@ -6,12 +6,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
 import 'features/notifications/services/background_sync_service.dart';
+import 'features/notifications/services/android_alarm_ticket_service.dart';
 import 'features/notifications/services/local_notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
   await LocalNotificationService.instance.initialize();
+  await AndroidAlarmTicketService.initialize();
   if (Platform.isAndroid || Platform.isIOS) {
     await BackgroundSyncService.initialize();
   }

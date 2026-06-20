@@ -36,6 +36,23 @@ class LocalNotificationService {
         ?.createNotificationChannel(channel);
   }
 
+  Future<void> requestPermissionIfNeeded() async {
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    if (android != null) {
+      final enabled = await android.areNotificationsEnabled() ?? false;
+      if (!enabled) await android.requestNotificationsPermission();
+      return;
+    }
+    final ios = _plugin
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
+    await ios?.requestPermissions(alert: true, badge: true, sound: true);
+  }
+
   Future<void> explainAndRequestPermission(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool(_askedKey) ?? false) return;

@@ -46,7 +46,7 @@ class TicketDetailsScreen extends ConsumerWidget {
     final user = ref.watch(authProvider).user!;
     final assignedToCurrent =
         ticket.pickedBy?.trim().toLowerCase() ==
-        user.fullName.trim().toLowerCase();
+        user.username.trim().toLowerCase();
     final mutating = state.mutatingTicketId == ticket.ticketId;
     return Scaffold(
       appBar: AppBar(title: Text('Ticket #${ticket.ticketId}')),
@@ -127,7 +127,7 @@ class TicketDetailsScreen extends ConsumerWidget {
                 icon: Icons.assignment_ind_outlined,
                 loading: mutating,
                 onPressed: () =>
-                    _confirmTake(context, ref, ticket, user.fullName),
+                    _confirmTake(context, ref, ticket, user.username),
               )
             else if (ticket.status.isActive && assignedToCurrent)
               GoldButton(
@@ -390,7 +390,7 @@ class _CloseTicketSheetState extends ConsumerState<_CloseTicketSheet> {
             ),
             const SizedBox(height: 6),
             Text(
-              '#${widget.ticket.ticketId} • Closed by ${user.fullName}',
+              '#${widget.ticket.ticketId} • Closed by ${user.username}',
               style: const TextStyle(color: AppColors.secondaryText),
             ),
             const SizedBox(height: 18),

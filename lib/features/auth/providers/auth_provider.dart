@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/storage/auth_storage.dart';
 import '../data/local_authenticator.dart';
+import '../data/static_users.dart';
 import '../models/support_user.dart';
 
 class AuthState {
@@ -36,7 +37,22 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> initialize() async {
-    final user = await _storage.restore();
+    final saved = await _storage.restore();
+    SupportUser? user;
+    if (saved != null) {
+      for (final configured in staticSupportUsers) {
+        if (configured.backendUserId == saved.backendUserId &&
+            configured.username == saved.username) {
+          user = SupportUser(
+            backendUserId: configured.backendUserId,
+            username: configured.username,
+            password: '',
+          );
+          break;
+        }
+      }
+      if (user == null) await _storage.clear();
+    }
     state = AuthState(user: user, initialized: true);
   }
 

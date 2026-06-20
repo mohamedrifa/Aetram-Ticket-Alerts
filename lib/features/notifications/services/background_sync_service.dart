@@ -8,9 +8,8 @@ import 'package:workmanager/workmanager.dart';
 import '../../../core/config/environment_config.dart';
 import '../../../core/storage/auth_storage.dart';
 import '../../tickets/data/ticket_api_service.dart';
-import '../utils/new_ticket_detector.dart';
 import 'local_notification_service.dart';
-import 'seen_ticket_store.dart';
+import 'ticket_notification_checker.dart';
 
 const _backgroundTask = 'aetramTicketBackgroundCheck';
 
@@ -34,19 +33,11 @@ void callbackDispatcher() {
         ),
       );
       final tickets = await TicketApiService(dio).getTickets();
-      final store = SeenTicketStore();
-      final seen = await store.read(user.backendUserId);
-      if (seen == null) {
-        await store.write(user.backendUserId, tickets.map((e) => e.ticketId));
-        return true;
-      }
-      final fresh = detectNewOpenTickets(tickets, seen);
       await LocalNotificationService.instance.initialize();
-      await LocalNotificationService.instance.showNewTickets(fresh);
-      await store.write(user.backendUserId, {
-        ...seen,
-        ...tickets.map((e) => e.ticketId),
-      });
+      await processTicketSnapshot(
+        userId: user.numericBackendUserId,
+        tickets: tickets,
+      );
       return true;
     } catch (_) {
       return false;
