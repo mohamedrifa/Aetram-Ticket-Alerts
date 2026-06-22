@@ -1,13 +1,8 @@
 class SupportUser {
-  const SupportUser({
-    required this.backendUserId,
-    required this.username,
-    required this.password,
-  });
+  const SupportUser({required this.backendUserId, required this.username});
 
   final String backendUserId;
   final String username;
-  final String password;
 
   int get numericBackendUserId => int.parse(backendUserId);
 
@@ -19,6 +14,5 @@ class SupportUser {
   factory SupportUser.fromSessionJson(Map<String, String> json) => SupportUser(
     backendUserId: json['backendUserId'] ?? '',
     username: json['username'] ?? '',
-    password: '',
   );
 }

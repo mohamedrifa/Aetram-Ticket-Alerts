@@ -4,13 +4,75 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../tickets/providers/ticket_provider.dart';
 import '../../notifications/services/android_alarm_ticket_service.dart';
+import '../../tickets/providers/ticket_provider.dart';
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  bool _signingOut = false;
+
+  Future<void> _signOut() async {
+    if (_signingOut) return;
+    final confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.logout, color: AppColors.error),
+                SizedBox(width: 10),
+                Text('Sign out?'),
+              ],
+            ),
+            content: const Text(
+              'Your secure login session will be cleared. You will need to sign in again using Firebase credentials.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.error,
+                  foregroundColor: Colors.black,
+                ),
+                onPressed: () => Navigator.pop(context, true),
+                icon: const Icon(Icons.logout),
+                label: const Text('Sign out'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!confirmed || !mounted) return;
+
+    setState(() => _signingOut = true);
+    try {
+      ref.read(ticketProvider.notifier).clearForLogout();
+      await AndroidAlarmTicketService.cancel();
+      await ref.read(authProvider.notifier).logout();
+      if (mounted) context.go('/login');
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _signingOut = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text('Unable to sign out. Please try again.'),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user!;
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
@@ -36,52 +98,31 @@ class ProfileScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
             Card(
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.account_circle_outlined),
-                    title: const Text('Username'),
-                    subtitle: Text(user.username),
-                  ),
-                ],
+              child: ListTile(
+                leading: const Icon(Icons.account_circle_outlined),
+                title: const Text('Username'),
+                subtitle: Text(user.username),
               ),
             ),
             const SizedBox(height: 24),
             OutlinedButton.icon(
+              key: const Key('signOutButton'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.error,
                 minimumSize: const Size.fromHeight(50),
+                side: const BorderSide(color: AppColors.error),
               ),
-              onPressed: () async {
-                final ok =
-                    await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Sign out?'),
-                        content: const Text(
-                          'Your local session will be cleared. Ticket notification history is kept for this user.',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Cancel'),
-                          ),
-                          FilledButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: const Text('Sign out'),
-                          ),
-                        ],
+              onPressed: _signingOut ? null : _signOut,
+              icon: _signingOut
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.error,
                       ),
-                    ) ??
-                    false;
-                if (!ok) return;
-                ref.read(ticketProvider.notifier).stopPolling();
-                await AndroidAlarmTicketService.cancel();
-                await ref.read(authProvider.notifier).logout();
-                if (context.mounted) context.go('/login');
-              },
-              icon: const Icon(Icons.logout),
-              label: const Text('Sign out'),
+                    )
+                  : const Icon(Icons.logout),
+              label: Text(_signingOut ? 'Signing out...' : 'Sign out'),
             ),
           ],
         ),

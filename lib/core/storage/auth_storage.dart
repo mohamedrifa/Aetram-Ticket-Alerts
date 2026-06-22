@@ -8,11 +8,13 @@ class AuthStorage {
   AuthStorage([FlutterSecureStorage? storage])
     : _storage = storage ?? const FlutterSecureStorage();
   final FlutterSecureStorage _storage;
-  static const _sessionKey = 'authenticatedSession';
+  static const _sessionKey = 'firebaseAuthenticatedSessionV1';
+  static const _legacySessionKey = 'authenticatedSession';
 
   Future<void> save(SupportUser user) =>
       _storage.write(key: _sessionKey, value: jsonEncode(user.toSessionJson()));
   Future<SupportUser?> restore() async {
+    await _storage.delete(key: _legacySessionKey);
     final raw = await _storage.read(key: _sessionKey);
     if (raw == null) return null;
     try {
@@ -27,5 +29,10 @@ class AuthStorage {
     }
   }
 
-  Future<void> clear() => _storage.delete(key: _sessionKey);
+  Future<void> clear() async {
+    await Future.wait([
+      _storage.delete(key: _sessionKey),
+      _storage.delete(key: _legacySessionKey),
+    ]);
+  }
 }

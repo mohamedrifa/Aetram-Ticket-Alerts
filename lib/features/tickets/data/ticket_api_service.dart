@@ -15,12 +15,14 @@ class TicketApiService {
       final response = await _dio.get<dynamic>(getTicketsPath);
       final body = response.data;
       dynamic raw = body;
-      if (body is Map)
+      if (body is Map) {
         raw = body['Data'] ?? body['data'] ?? body['Result'] ?? body['result'];
-      if (raw is! List)
+      }
+      if (raw is! List) {
         throw const ApiException(
           'The ticket service returned an unexpected response.',
         );
+      }
       final parsed = raw
           .whereType<Map>()
           .map((item) => TicketModel.fromJson(Map<String, dynamic>.from(item)))
@@ -46,19 +48,21 @@ class TicketApiService {
         insertResponsePath,
         data: request.toJson(),
       );
-      if (response.data is! Map)
+      if (response.data is! Map) {
         throw const ApiException(
           'The ticket service returned an unexpected response.',
         );
+      }
       final result = TicketActionResult.fromJson(
         Map<String, dynamic>.from(response.data as Map),
       );
-      if (!result.isSuccess)
+      if (!result.isSuccess) {
         throw ApiException(
           result.message.isEmpty
               ? 'The ticket could not be updated.'
               : result.message,
         );
+      }
       return result;
     } on DioException catch (error) {
       throw _mapError(error);
@@ -81,16 +85,19 @@ class TicketApiService {
     }
     if (error.type == DioExceptionType.connectionTimeout ||
         error.type == DioExceptionType.receiveTimeout ||
-        error.type == DioExceptionType.sendTimeout)
+        error.type == DioExceptionType.sendTimeout) {
       return const ApiException('The request timed out. Please try again.');
-    if (error.type == DioExceptionType.connectionError)
+    }
+    if (error.type == DioExceptionType.connectionError) {
       return const ApiException(
         'No network connection. Check your connection and retry.',
       );
-    if ((error.response?.statusCode ?? 0) >= 500)
+    }
+    if ((error.response?.statusCode ?? 0) >= 500) {
       return const ApiException(
         'The ticket service is temporarily unavailable.',
       );
+    }
     return const ApiException('Unable to contact the ticket service.');
   }
 }

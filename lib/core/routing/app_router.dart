@@ -21,17 +21,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/dashboard', builder: (_, __) => const DashboardScreen()),
+      GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
+      GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+      GoRoute(path: '/dashboard', builder: (_, _) => const DashboardScreen()),
       GoRoute(
         path: '/tickets/:ticketId',
         builder: (_, state) => TicketDetailsScreen(
           ticketId: int.tryParse(state.pathParameters['ticketId'] ?? '') ?? 0,
         ),
       ),
-      GoRoute(path: '/my-tickets', builder: (_, __) => const MyTicketsScreen()),
-      GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
+      GoRoute(path: '/my-tickets', builder: (_, _) => const MyTicketsScreen()),
+      GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
     ],
   );
 });

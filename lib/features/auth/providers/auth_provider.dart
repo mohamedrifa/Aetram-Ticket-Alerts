@@ -1,8 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/storage/auth_storage.dart';
-import '../data/local_authenticator.dart';
-import '../data/static_users.dart';
+import '../data/firebase_login_service.dart';
 import '../models/support_user.dart';
 
 class AuthState {
@@ -24,35 +23,25 @@ class AuthState {
 }
 
 final authStorageProvider = Provider<AuthStorage>((ref) => AuthStorage());
+final loginServiceProvider = Provider<LoginService>(
+  (ref) => FirebaseLoginService(),
+);
 final authProvider = NotifierProvider<AuthController, AuthState>(
   AuthController.new,
 );
 
 class AuthController extends Notifier<AuthState> {
   late AuthStorage _storage;
+  late LoginService _loginService;
   @override
   AuthState build() {
     _storage = ref.read(authStorageProvider);
+    _loginService = ref.read(loginServiceProvider);
     return const AuthState();
   }
 
   Future<void> initialize() async {
-    final saved = await _storage.restore();
-    SupportUser? user;
-    if (saved != null) {
-      for (final configured in staticSupportUsers) {
-        if (configured.backendUserId == saved.backendUserId &&
-            configured.username == saved.username) {
-          user = SupportUser(
-            backendUserId: configured.backendUserId,
-            username: configured.username,
-            password: '',
-          );
-          break;
-        }
-      }
-      if (user == null) await _storage.clear();
-    }
+    final user = await _storage.restore();
     state = AuthState(user: user, initialized: true);
   }
 
@@ -61,14 +50,22 @@ class AuthController extends Notifier<AuthState> {
       return 'Username and password are required.';
     }
     state = state.copyWith(busy: true);
-    final match = authenticateStaticUser(identity, password);
-    if (match == null) {
+    try {
+      final match = await _loginService.authenticate(identity, password);
+      if (match == null) {
+        state = state.copyWith(busy: false);
+        return 'Invalid username or password.';
+      }
+      await _storage.save(match);
+      state = AuthState(user: match, initialized: true);
+      return null;
+    } on LoginServiceException catch (error) {
       state = state.copyWith(busy: false);
-      return 'Invalid username or password.';
+      return error.message;
+    } catch (_) {
+      state = state.copyWith(busy: false);
+      return 'Unable to reach the login service. Please try again.';
     }
-    await _storage.save(match);
-    state = AuthState(user: match, initialized: true);
-    return null;
   }
 
   Future<void> logout() async {

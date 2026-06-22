@@ -48,6 +48,8 @@ dependencies:
   cached_network_image: ^3.4.1
   url_launcher: ^6.3.2
   android_alarm_manager_plus: ^5.0.0
+  firebase_core: ^4.11.0
+  firebase_database: ^12.4.3
 
 dev_dependencies:
   flutter_test:

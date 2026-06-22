@@ -112,6 +112,11 @@ class TicketController extends Notifier<TicketState> {
     _timer = null;
   }
 
+  void clearForLogout() {
+    stopPolling();
+    state = const TicketState();
+  }
+
   Future<void> _detectNewTickets(List<TicketModel> tickets) async {
     final user = ref.read(authProvider).user;
     if (user == null) return;
@@ -168,8 +173,9 @@ class TicketController extends Notifier<TicketState> {
 
   Future<String?> take(TicketModel ticket) async {
     final user = ref.read(authProvider).user;
-    if (user == null || state.mutatingTicketId != null)
+    if (user == null || state.mutatingTicketId != null) {
       return 'Unable to identify the current user.';
+    }
     state = state.copyWith(mutatingTicketId: ticket.ticketId, clearError: true);
     try {
       await _repository.submit(
@@ -199,10 +205,12 @@ class TicketController extends Notifier<TicketState> {
     if (validation != null) return validation;
     if (user == null ||
         ticket.pickedBy?.trim().toLowerCase() !=
-            user.username.trim().toLowerCase())
+            user.username.trim().toLowerCase()) {
       return 'Only the assigned support user can close this ticket.';
-    if (state.mutatingTicketId != null)
+    }
+    if (state.mutatingTicketId != null) {
       return 'Another ticket action is already in progress.';
+    }
     state = state.copyWith(mutatingTicketId: ticket.ticketId, clearError: true);
     try {
       await _repository.submit(

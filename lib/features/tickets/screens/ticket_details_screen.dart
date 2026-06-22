@@ -23,7 +23,7 @@ class TicketDetailsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(ticketProvider);
     final ticket = state.byId(ticketId);
-    if (ticket == null)
+    if (ticket == null) {
       return Scaffold(
         appBar: AppBar(title: Text('Ticket #$ticketId')),
         body: Center(
@@ -43,6 +43,7 @@ class TicketDetailsScreen extends ConsumerWidget {
                 ),
         ),
       );
+    }
     return Scaffold(
       appBar: AppBar(title: Text('Ticket #${ticket.ticketId}')),
       body: SafeArea(
@@ -229,7 +230,7 @@ class _Attachment extends StatelessWidget {
       ticket.fullFilePath,
       EnvironmentConfig.attachmentBaseUrl,
     );
-    if (url == null)
+    if (url == null) {
       return const _Section(
         title: 'Attachment',
         child: Text(
@@ -237,6 +238,7 @@ class _Attachment extends StatelessWidget {
           style: TextStyle(color: AppColors.secondaryText),
         ),
       );
+    }
     return _Section(
       title: 'Attachment',
       child: Column(
@@ -249,13 +251,13 @@ class _Attachment extends StatelessWidget {
                 imageUrl: url,
                 width: double.infinity,
                 fit: BoxFit.contain,
-                placeholder: (_, __) => const SizedBox(
+                placeholder: (_, _) => const SizedBox(
                   height: 210,
                   child: Center(
                     child: CircularProgressIndicator(color: AppColors.gold),
                   ),
                 ),
-                errorWidget: (_, __, ___) => Container(
+                errorWidget: (_, _, _) => Container(
                   height: 120,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
@@ -279,12 +281,13 @@ class _Attachment extends StatelessWidget {
               final uri = Uri.tryParse(url);
               if (uri == null ||
                   !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-                if (context.mounted)
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Attachment could not be opened.'),
                     ),
                   );
+                }
               }
             },
             icon: const Icon(Icons.open_in_new),
@@ -478,10 +481,11 @@ class _CloseTicketSheetState extends ConsumerState<_CloseTicketSheet> {
         .read(ticketProvider.notifier)
         .close(widget.ticket, controller.text);
     if (!mounted) return;
-    if (result == null)
+    if (result == null) {
       Navigator.pop(context, true);
-    else
+    } else {
       setState(() => error = result);
+    }
   }
 
   @override
